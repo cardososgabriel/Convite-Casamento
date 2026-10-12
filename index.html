@@ -161,6 +161,8 @@ var GIFTS = [["Jogo de cama","🛏️",280],["Varal Suspenso de Roupa","👕",90
 var DONE=/*S*/[]/*E*/; // itens já presenteados (índices)
 var LISTA = [];
 /* ========================== */
+// Endereço do Google Apps Script que grava a resposta na planilha (veja o passo a passo)
+var SHEET_URL = "https://script.google.com/macros/s/AKfycbwMdntm1YFbEH2TCgGiXhnyhiFl1I1yy4Hb7NWNOKz30HIMjS0AYQHVG-sJWNrjwARktw/exec";
 var $=function(i){return document.getElementById(i)};
 function show(v){["intro","rsvp","done","gifts"].forEach(function(x){$(x).hidden=x!==v});scrollTo(0,0)}
 var qs=new URLSearchParams(location.search);
@@ -181,11 +183,17 @@ function openInvite(){if(!G){$("idmsg").textContent="Use o link que enviamos par
 $("closed").onclick=openInvite;
 $("toRsvp").onclick=function(){show("rsvp")};
 $("confirm").onclick=function(){
-  var sim=document.querySelector("input[name=r]:checked").value==="sim";
+  var sim=document.querySelector("input[name=r]:checked").value==="sim", btn=$("confirm"), wa=$("wa");
   $("thanks").textContent=sim?"Que alegria!":"Sentiremos sua falta!";
-  $("doneTxt").textContent=sim?"Sua presença está confirmada. Se quiser nos presentear, a lista está logo abaixo.":"Obrigado por avisar. Se quiser nos presentear mesmo assim, a lista está logo abaixo.";
-  if(CFG.whatsapp){var a=$("wa");a.hidden=false;a.href="https://wa.me/"+CFG.whatsapp+"?text="+encodeURIComponent("Olá! Aqui é "+G.n+". "+(sim?"Confirmo minha presença":"Infelizmente não poderei comparecer")+" no casamento de Gabriel & Luana, dia 25/01/2027. (Convite: "+(code||"sem código")+")")}
-  show("done");
+  var okTxt=sim?"Sua presença está confirmada. Se quiser nos presentear, a lista está logo abaixo.":"Obrigado por avisar. Se quiser nos presentear mesmo assim, a lista está logo abaixo.";
+  if(CFG.whatsapp){wa.href="https://wa.me/"+CFG.whatsapp+"?text="+encodeURIComponent("Olá! Aqui é "+G.n+". "+(sim?"Confirmo minha presença":"Infelizmente não poderei comparecer")+" no casamento de Gabriel & Luana, dia 25/01/2027. (Convite: "+(code||"sem código")+")")}
+  if(!SHEET_URL){$("doneTxt").textContent=okTxt;wa.hidden=!CFG.whatsapp;show("done");return}
+  btn.disabled=true;btn.textContent="Enviando…";
+  var ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},15000);
+  fetch(SHEET_URL,{method:"POST",mode:"no-cors",signal:ctl.signal,headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({c:code,n:G.n,r:sim?"sim":"nao"})})
+   .then(function(){$("doneTxt").textContent=okTxt;wa.hidden=true;show("done")})
+   .catch(function(){$("doneTxt").textContent="Não conseguimos registrar sua resposta automaticamente. Toque no botão abaixo para avisar os noivos pelo WhatsApp.";wa.hidden=!CFG.whatsapp;show("done")})
+   .then(function(){clearTimeout(t);btn.disabled=false;btn.textContent="Confirmar"});
 };
 $("toGifts").onclick=function(){show("gifts")};
 
