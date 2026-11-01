@@ -122,6 +122,18 @@ body{background:#f3f1ee url(data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
 .tag span{font-size:calc(22*var(--u))}
 .go{position:absolute;right:calc(30*var(--u));bottom:calc(22*var(--u))}
 }
+.info .loc{color:inherit;text-decoration:none;display:flex;flex-direction:column;gap:2px;pointer-events:auto}
+.info .l2{font-size:16px;font-weight:500}
+.info .mapa{font-size:13px;text-decoration:underline;color:#a58a4e;margin-top:2px}
+.info .loc:hover .l,.info .loc:focus-visible .l{text-decoration:underline}
+.gnote{background:#fffdf7;border:2px solid var(--gold);border-radius:12px;padding:12px 14px;margin:8px 0 4px}
+.gnote p{margin:0 0 10px}.gbtns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.mini2{font-size:16px;padding:8px 16px}
+@media (min-width:900px) and (min-height:500px){
+.info{pointer-events:auto}
+.info .l{font-size:calc(23*var(--u))}
+.info .l2{font-size:calc(17.5*var(--u))}
+.info .mapa{font-size:calc(14*var(--u))}
+}
 @media (prefers-reduced-motion:reduce){*{transition-duration:.01s!important;transition-delay:0s!important}}
 </style>
 </head>
@@ -144,7 +156,7 @@ body{background:#f3f1ee url(data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
     <p id="idmsg" role="status"></p>
   </div>
   <div class="extras">
-    <div class="info"><i class="sealm"></i><span class="t">Nosso grande dia</span><span class="l">Local: Estrada Macembu, 93 - Taquara</span><small>Confirme sua presença até 15/12/2026</small></div>
+    <div class="info"><i class="sealm"></i><span class="t">Nosso grande dia</span><a class="loc" href="https://www.google.com/maps/place/Sollar+Macembu/data=!4m2!3m1!1s0x0:0xccace519e51ddee4?sa=X&amp;ved=1t:2428&amp;ictx=111" target="_blank" rel="noopener" aria-label="Abrir Sollar Macembu no Google Maps"><span class="l">Local: Sollar Macembu</span><span class="l2">Estrada Macembu, 93 - Taquara</span><span class="mapa">📍 Ver no Google Maps</span></a><small>Confirme sua presença até 15/12/2026</small></div>
     <div class="tag"><span>“Estranho seria se eu não me apaixonasse por você”</span></div>
   </div>
   <p class="script hint">Clique no selo para abrir</p>
@@ -180,6 +192,7 @@ body{background:#f3f1ee url(data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2
 
 <section class="view" id="gifts" hidden="" style="max-width:760px">
   <h2 class="script">Lista de presentes</h2>
+  <div class="gnote" id="gnote" hidden=""><p id="gtxt"></p><div class="gbtns"><button class="btn alt mini2" id="gchange">Alterar minha resposta</button><button class="btn alt mini2" id="grever">Rever o convite</button></div></div>
   <p>Escolha um presente. Ao tocar, aparece o QR Code do Pix com o valor.</p>
   <div class="grid" id="grid"></div>
 </section>
@@ -215,6 +228,10 @@ var code=(qs.get("c")||"").toLowerCase().slice(0,12);
 var NAME=(qs.get("n")||"").replace(/\s+/g," ").trim().slice(0,80);
 var G=NAME?{n:NAME}:null;
 var first=function(n){return n.split(" ")[0]};
+function skey(){return "cv_"+(code||"")+"|"+(G?G.n.toLowerCase():"")}
+function getSaved(){try{var v=localStorage.getItem(skey());return v?JSON.parse(v):null}catch(e){return null}}
+function noteGifts(sim){$("gnote").hidden=false;$("gtxt").textContent=sim?"Presença confirmada, "+first(G.n)+"! 💛 Obrigado por celebrar com a gente.":"Recebemos a sua resposta, "+first(G.n)+". Obrigado por avisar! 💛"}
+function saveResp(sim){try{localStorage.setItem(skey(),JSON.stringify({r:sim?"sim":"nao"}))}catch(e){}noteGifts(sim)}
 function setGuest(n){G={n:n};$("to").textContent=n;$("hello").textContent="Olá, "+first(n)+"!";$("who").textContent=n;$("rsvpForm").hidden=false;$("rsvpInvalid").hidden=true;$("idbox").hidden=true}
 if(G){setGuest(G.n)}else{$("rsvpForm").hidden=true;$("idbox").hidden=false}
 function norm(t){return t.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().trim()}
@@ -223,6 +240,9 @@ $("idin").oninput=function(){var m=matches();$("sugg").innerHTML="";$("idmsg").t
   m.forEach(function(n){var b=document.createElement("button");b.textContent=n;b.onclick=function(){setGuest(n);$("sugg").innerHTML="";$("idmsg").textContent=""};$("sugg").appendChild(b)})};
 $("idin").onkeydown=function(e){if(e.key==="Enter"){var m=matches();if(m.length===1){setGuest(m[0]);$("sugg").innerHTML=""}}};
 $("toGifts2").onclick=function(){show("gifts")};
+$("gchange").onclick=function(){show("rsvp")};
+$("grever").onclick=function(){show("intro")};
+if(G){var sv=getSaved();if(sv){noteGifts(sv.r==="sim");show("gifts")}}
 
 function openInvite(){if(!G){$("idmsg").textContent="Use o link que enviamos para você para abrir o convite.";$("idin").focus();return}$("intro").classList.add("open")}
 $("closed").onclick=openInvite;
@@ -232,11 +252,11 @@ $("confirm").onclick=function(){
   $("thanks").textContent=sim?"Que alegria!":"Sentiremos sua falta!";
   var okTxt=sim?"Sua presença está confirmada. Se quiser nos presentear, a lista está logo abaixo.":"Obrigado por avisar. Se quiser nos presentear mesmo assim, a lista está logo abaixo.";
   if(CFG.whatsapp){wa.href="https://wa.me/"+CFG.whatsapp+"?text="+encodeURIComponent("Olá! Aqui é "+G.n+". "+(sim?"Confirmo minha presença":"Infelizmente não poderei comparecer")+" no casamento de Gabriel & Luana, dia 25/01/2027. (Convite: "+(code||"sem código")+")")}
-  if(!SHEET_URL){$("doneTxt").textContent=okTxt;wa.hidden=!CFG.whatsapp;show("done");return}
+  if(!SHEET_URL){$("doneTxt").textContent=okTxt;wa.hidden=!CFG.whatsapp;saveResp(sim);show("done");return}
   btn.disabled=true;btn.textContent="Enviando…";
   var ctl=new AbortController(),t=setTimeout(function(){ctl.abort()},15000);
   fetch(SHEET_URL,{method:"POST",mode:"no-cors",signal:ctl.signal,headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({c:code,n:G.n,r:sim?"sim":"nao"})})
-   .then(function(){$("doneTxt").textContent=okTxt;wa.hidden=true;show("done")})
+   .then(function(){$("doneTxt").textContent=okTxt;wa.hidden=true;saveResp(sim);show("done")})
    .catch(function(){$("doneTxt").textContent="Não conseguimos registrar sua resposta automaticamente. Toque no botão abaixo para avisar os noivos pelo WhatsApp.";wa.hidden=!CFG.whatsapp;show("done")})
    .then(function(){clearTimeout(t);btn.disabled=false;btn.textContent="Confirmar"});
 };
